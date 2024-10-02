@@ -1,0 +1,9 @@
+main.dSYM
+*.bin
+
+encodec
+*.o
+*.th
+.vscode/
+
+build/
