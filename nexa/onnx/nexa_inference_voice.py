@@ -32,7 +32,10 @@ class NexaVoiceInference:
     streamlit (bool): Run the inference in Streamlit UI.
     """
 
-    def __init__(self, model_path, local_path=None, **kwargs):
+    def __init__(self, model_path=None, local_path=None, **kwargs):
+        if model_path is None and local_path is None:
+            raise ValueError("Either model_path or local_path must be provided.")
+        
         self.model_path = NEXA_RUN_MODEL_MAP_ONNX.get(model_path, model_path)
         self.downloaded_onnx_folder = local_path
         self.params = {"output_dir": "transcriptions", "sampling_rate": 16000}
@@ -42,7 +45,7 @@ class NexaVoiceInference:
 
     def run(self):
         if self.downloaded_onnx_folder is None:
-            self.downloaded_onnx_folder, run_type = pull_model(self.model_path)
+            self.downloaded_onnx_folder, run_type = pull_model(self.model_path, **kwargs)
 
         if self.downloaded_onnx_folder is None:
             logging.error(
@@ -122,7 +125,7 @@ class NexaVoiceInference:
         logging.info(f"Transcription saved to: {output_path}")
         return output_path
 
-    def run_streamlit(self, model_path: str):
+    def run_streamlit(self, model_path: str, is_local_path = False):
         """
         Run the Streamlit UI.
         """
@@ -133,7 +136,7 @@ class NexaVoiceInference:
             Path(__file__).resolve().parent / "streamlit" / "streamlit_voice_chat.py"
         )
 
-        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path]
+        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path, str(is_local_path)]
         sys.exit(stcli.main())
 
 

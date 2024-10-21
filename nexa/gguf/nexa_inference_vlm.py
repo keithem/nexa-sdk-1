@@ -89,24 +89,31 @@ class NexaVLMInference:
     top_k (int): Top-k sampling parameter.
     top_p (float): Top-p sampling parameter
     """
-    def __init__(self, model_path, local_path=None, stop_words=None, **kwargs):
+    def __init__(self, model_path=None, local_path=None, projector_local_path=None, stop_words=None, device="auto", **kwargs):
+        if model_path is None and local_path is None:
+            raise ValueError("Either model_path or local_path must be provided.")
+        
         self.params = DEFAULT_TEXT_GEN_PARAMS
         self.params.update(kwargs)
         self.model = None
         self.projector = None
         self.projector_path = NEXA_RUN_PROJECTOR_MAP.get(model_path, None)
         self.downloaded_path = local_path
-        self.projector_downloaded_path = None
+        self.projector_downloaded_path = projector_local_path
+        self.device = device
 
-        if self.downloaded_path is not None:
+        if self.downloaded_path is not None and self.projector_downloaded_path is not None:
+            # when running from local, both path should be provided
+            pass
+        elif self.downloaded_path is not None:
             if model_path in NEXA_RUN_MODEL_MAP_VLM:
                 self.projector_path = NEXA_RUN_PROJECTOR_MAP[model_path]
-                self.projector_downloaded_path, _ = pull_model(self.projector_path)
+                self.projector_downloaded_path, _ = pull_model(self.projector_path, **kwargs)
         elif model_path in NEXA_RUN_MODEL_MAP_VLM:
             self.model_path = NEXA_RUN_MODEL_MAP_VLM[model_path]
             self.projector_path = NEXA_RUN_PROJECTOR_MAP[model_path]
-            self.downloaded_path, _ = pull_model(self.model_path)
-            self.projector_downloaded_path, _ = pull_model(self.projector_path)
+            self.downloaded_path, _ = pull_model(self.model_path, **kwargs)
+            self.projector_downloaded_path, _ = pull_model(self.projector_path, **kwargs)
         elif Path(model_path).parent.exists():
             local_dir = Path(model_path).parent
             model_name = Path(model_path).name
@@ -123,7 +130,7 @@ class NexaVLMInference:
             logging.error("VLM user model from hub is not supported yet.")
             exit(1)
 
-        if self.downloaded_path is None:
+        if self.downloaded_path is None or self.projector_downloaded_path is None:
             logging.error(
                 f"Model ({model_path}) is not applicable. Please refer to our docs for proper usage.",
                 exc_info=True,
@@ -160,13 +167,18 @@ class NexaVLMInference:
             )
             try:
                 from nexa.gguf.llama.llama import Llama
+                if self.device == "auto" or self.device == "gpu":
+                    n_gpu_layers = -1 if is_gpu_available() else 0
+                elif self.device == "cpu":
+                    n_gpu_layers = 0
+                
                 self.model = Llama(
                     model_path=self.downloaded_path,
                     chat_handler=self.projector,
                     verbose=False,
                     chat_format=self.chat_format,
-                    n_ctx=2048,
-                    n_gpu_layers=-1 if is_gpu_available() else 0,
+                    n_ctx=self.params.get("nctx", 2048),
+                    n_gpu_layers=n_gpu_layers,
                 )
             except Exception as e:
                 logging.error(
@@ -178,7 +190,7 @@ class NexaVLMInference:
                     chat_handler=self.projector,
                     verbose=False,
                     chat_format=self.chat_format,
-                    n_ctx=2048,
+                    n_ctx=self.params.get("nctx", 2048),
                     n_gpu_layers=0,  # hardcode to use CPU
                 )
 
@@ -327,14 +339,17 @@ class NexaVLMInference:
             stop=self.stop_words,
         )
 
-    def run_streamlit(self, model_path: str):
+    def run_streamlit(self, model_path: str, is_local_path = False, hf = False, projector_local_path = None):
+        """
+        Run the Streamlit UI.
+        """
         logging.info("Running Streamlit UI...")
 
         streamlit_script_path = (
             Path(os.path.abspath(__file__)).parent / "streamlit" / "streamlit_vlm.py"
         )
 
-        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path]
+        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path, str(is_local_path), str(hf), str(projector_local_path)]
         sys.exit(stcli.main())
 
 
@@ -364,6 +379,12 @@ if __name__ == "__main__":
         "-p", "--top_p", type=float, default=1.0, help="Top-p sampling parameter"
     )
     parser.add_argument(
+        "--nctx",
+        type=int,
+        default=2048,
+        help="Maximum context length of the model you're using"
+    )
+    parser.add_argument(
         "-sw",
         "--stop_words",
         nargs="*",
@@ -382,11 +403,21 @@ if __name__ == "__main__":
         action="store_true",
         help="Run the inference in Streamlit UI",
     )
+    parser.add_argument(
+        "-d",
+        "--device",
+        type=str,
+        choices=["auto", "cpu", "gpu"],
+        default="auto",
+        help="Device to use for inference (auto, cpu, or gpu)",
+    )
     args = parser.parse_args()
     kwargs = {k: v for k, v in vars(args).items() if v is not None}
     model_path = kwargs.pop("model_path")
     stop_words = kwargs.pop("stop_words", [])
-    inference = NexaVLMInference(model_path, stop_words=stop_words, **kwargs)
+    device = kwargs.pop("device", "auto")
+
+    inference = NexaVLMInference(model_path, stop_words=stop_words, device=device, **kwargs)
     if args.streamlit:
         inference.run_streamlit(model_path)
     else:

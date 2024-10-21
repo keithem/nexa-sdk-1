@@ -53,11 +53,20 @@ class NexaImageInference:
     guidance_scale (float): Guidance scale for diffusion.
     output_path (str): Output path for the generated image.
     random_seed (int): Random seed for image generation.
+    lora_dir (str): Path to directory containing LoRA files.
+    lora_path (str): Path to a LoRA file to apply to the model.
+    wtype (str): Weight type (options: default, f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0).
+    control_net_path (str): Path to control net model.
+    control_image_path (str): Path to image condition for Control Net.
+    control_strength (float): Strength to apply Control Net.
     streamlit (bool): Run the inference in Streamlit UI.
-
+    profiling (bool): Enable profiling logs for the inference process.
     """
 
-    def __init__(self, model_path, local_path=None, **kwargs):
+    def __init__(self, model_path=None, local_path=None, **kwargs):
+        if model_path is None and local_path is None:
+            raise ValueError("Either model_path or local_path must be provided.")
+        
         self.model_path = model_path
         self.downloaded_path = local_path
 
@@ -71,7 +80,7 @@ class NexaImageInference:
 
         # Download base model if not provided
         if self.downloaded_path is None:
-            self.downloaded_path, _ = pull_model(self.model_path)
+            self.downloaded_path, _ = pull_model(self.model_path, **kwargs)
             if self.downloaded_path is None:
                 logging.error(
                     f"Model ({model_path}) is not applicable. Please refer to our docs for proper usage.",
@@ -86,11 +95,11 @@ class NexaImageInference:
             self.clip_l_path = FLUX_CLIP_L_PATH
 
             if self.t5xxl_path:
-                self.t5xxl_downloaded_path, _ = pull_model(self.t5xxl_path)
+                self.t5xxl_downloaded_path, _ = pull_model(self.t5xxl_path, **kwargs)
             if self.ae_path:
-                self.ae_downloaded_path, _ = pull_model(self.ae_path)
+                self.ae_downloaded_path, _ = pull_model(self.ae_path, **kwargs)
             if self.clip_l_path:
-                self.clip_l_downloaded_path, _ = pull_model(self.clip_l_path)
+                self.clip_l_downloaded_path, _ = pull_model(self.clip_l_path, **kwargs)
         if "lcm-dreamshaper" in self.model_path or "flux" in self.model_path:
             self.params = DEFAULT_IMG_GEN_PARAMS_LCM.copy() # both lcm-dreamshaper and flux use the same params
         elif "sdxl-turbo" in self.model_path:
@@ -98,6 +107,7 @@ class NexaImageInference:
         else:
             self.params = DEFAULT_IMG_GEN_PARAMS.copy()
 
+        self.profiling = kwargs.get("profiling", False)
         self.params.update({k: v for k, v in kwargs.items() if v is not None})
         if not kwargs.get("streamlit", False):
             self._load_model(model_path)
@@ -119,7 +129,7 @@ class NexaImageInference:
                     wtype=self.params.get(
                         "wtype", NEXA_RUN_MODEL_PRECISION_MAP.get(model_path, "default")
                     ),  # Weight type (options: default, f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0)
-                    verbose=False,
+                    verbose=self.profiling,
                 )
             else:
                 self.model = StableDiffusion(
@@ -130,7 +140,7 @@ class NexaImageInference:
                         "wtype", NEXA_RUN_MODEL_PRECISION_MAP.get(model_path, "default")
                     ),  # Weight type (options: default, f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0)
                     control_net_path=self.params.get("control_net_path", ""),
-                    verbose=False,
+                    verbose=self.profiling,
                 )
 
     def _save_images(self, images):
@@ -287,7 +297,7 @@ class NexaImageInference:
             except Exception as e:
                 logging.error(f"Error during generation: {e}", exc_info=True)
 
-    def run_streamlit(self, model_path: str):
+    def run_streamlit(self, model_path: str, is_local_path = False, hf = False):
         """
         Run the Streamlit UI.
         """
@@ -299,7 +309,7 @@ class NexaImageInference:
             / "streamlit_image_chat.py"
         )
 
-        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path]
+        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path, str(is_local_path), str(hf)]
         sys.exit(stcli.main())
 
 
@@ -352,12 +362,42 @@ if __name__ == "__main__":
         default=0,
         help="Random seed for image generation",
     )
-    # parser.add_argument("--device", type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help="Device to run the model on (default: cuda if available, else cpu)")
+    parser.add_argument(
+        "--lora_dir",
+        type=str,
+        help="Path to directory containing LoRA files.",
+    )
+    parser.add_argument(
+        "--wtype",
+        type=str,
+        help="Weight type (options: default, f32, f16, q4_0, q4_1, q5_0, q5_1, q8_0)",
+    )
+    parser.add_argument(
+        "--control_net_path",
+        type=str,
+        help="Path to control net model.",
+    )
+    parser.add_argument(
+        "--control_image_path",
+        type=str,
+        help="Path to image condition for Control Net.",
+    )
+    parser.add_argument(
+        "--control_strength",
+        type=float,
+        help="Strength to apply Control Net.",
+    )
     parser.add_argument(
         "-st",
         "--streamlit",
         action="store_true",
         help="Run the inference in Streamlit UI",
+    )
+    parser.add_argument(
+        "-pf",
+        "--profiling",
+        action="store_true",
+        help="Enable profiling logs for the inference process",
     )
     args = parser.parse_args()
     kwargs = {k: v for k, v in vars(args).items() if v is not None}

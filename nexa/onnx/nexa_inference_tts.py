@@ -33,7 +33,10 @@ class NexaTTSInference:
     streamlit (bool): Run the inference in Streamlit UI.
     """
     
-    def __init__(self, model_path, local_path=None, **kwargs):
+    def __init__(self, model_path=None, local_path=None, **kwargs):
+        if model_path is None and local_path is None:
+            raise ValueError("Either model_path or local_path must be provided.")
+        
         self.model_path = NEXA_RUN_MODEL_MAP_ONNX.get(model_path, model_path)
         self.yaml_file_name = None
         self.params = {
@@ -47,7 +50,7 @@ class NexaTTSInference:
         self.downloaded_onnx_folder = local_path
 
         if self.downloaded_onnx_folder is None:
-            self.downloaded_onnx_folder, run_type = pull_model(self.model_path)
+            self.downloaded_onnx_folder, run_type = pull_model(self.model_path, **kwargs)
         
         if self.downloaded_onnx_folder is None:
             logging.error(
@@ -111,7 +114,7 @@ class NexaTTSInference:
         file_path = os.path.join(output_path, file_name)
         sf.write(file_path, audio_data, sampling_rate)
 
-    def run_streamlit(self, model_path: str):
+    def run_streamlit(self, model_path: str, is_local_path = False):
         """
         Run the Streamlit UI.
         """
@@ -122,7 +125,7 @@ class NexaTTSInference:
             Path(__file__).resolve().parent / "streamlit" / "streamlit_tts.py"
         )
 
-        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path]
+        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path, str(is_local_path)]
         sys.exit(stcli.main())
 
 

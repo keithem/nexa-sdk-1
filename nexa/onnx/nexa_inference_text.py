@@ -34,7 +34,10 @@ class NexaTextInference:
     top_p (float): Top-p sampling parameter
     """
 
-    def __init__(self, model_path, local_path=None, **kwargs):
+    def __init__(self, model_path=None, local_path=None, **kwargs):
+        if model_path is None and local_path is None:
+            raise ValueError("Either model_path or local_path must be provided.")
+        
         self.model_path = NEXA_RUN_MODEL_MAP_ONNX.get(model_path, model_path)
         self.params = {
             "temperature": 0.5,
@@ -146,7 +149,7 @@ class NexaTextInference:
             self.run_streamlit()
         else:
             if self.downloaded_onnx_folder is None:
-                self.downloaded_onnx_folder, run_type = pull_model(self.model_path)
+                self.downloaded_onnx_folder, run_type = pull_model(self.model_path, **kwargs)
 
             if self.downloaded_onnx_folder is None:
                 logging.error(
@@ -170,7 +173,7 @@ class NexaTextInference:
 
             self.start(chat_mode=chat_mode)
 
-    def run_streamlit(self, model_path: str):
+    def run_streamlit(self, model_path: str, is_local_path = False):
         """
         Run the Streamlit UI.
         """
@@ -181,7 +184,7 @@ class NexaTextInference:
             Path(__file__).resolve().parent / "streamlit" / "streamlit_text_chat.py"
         )
 
-        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path]
+        sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path, str(is_local_path)]
         sys.exit(stcli.main())
 
 

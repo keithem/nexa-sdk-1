@@ -28,7 +28,7 @@ dependencies = [
     "streamlit>=1.37.1",
     "streamlit-audiorec",
     "python-multipart",
-    "cmake",
+    "cmake"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -38,6 +38,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 [project.optional-dependencies]
@@ -55,10 +56,29 @@ onnx = [
     "ttstokenizer",
 ]
 
+eval = [
+    "sympy",
+    "openai",
+    "antlr4-python3-runtime==4.11",
+    "rouge_score",
+    "evaluate",
+    "pytablewriter",
+    "sacrebleu",
+    "langdetect",
+    "immutabledict",
+    "hydra-core",
+    "psutil",
+    "typing-extensions",
+    "flatten_dict",
+    "colorlog",
+    "pandas",
+    "rich",
+]
+
 [project.urls]
-Homepage = "https://github.com/NexaAI/nexaai-sdk-cpp"
-Issues = "https://github.com/NexaAI/nexaai-sdk-cpp/issues"
-Documentation = "https://docs-test.nexa4ai.com/"
+Homepage = "https://github.com/NexaAI/nexa-sdk"
+Issues = "https://github.com/NexaAI/nexa-sdk/issues"
+Documentation = "https://docs.nexa4ai.com/"
 
 [project.scripts]
 nexa-cli = "nexa.cli.entry:main"
@@ -78,6 +98,7 @@ wheel.packages = [
     "nexa.onnx",
     "nexa.onnx.streamlit",
     "nexa.onnx.server",
+    "nexa.eval",
 ]
 sdist.include = [
     "CMakeLists.txt",

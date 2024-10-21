@@ -6,6 +6,7 @@ from enum import Enum
 NEXA_CACHE_ROOT = Path(os.getenv("NEXA_CACHE_ROOT") or "~/.cache/nexa").expanduser()
 NEXA_TOKEN_PATH = NEXA_CACHE_ROOT / "token"
 NEXA_MODELS_HUB_DIR = NEXA_CACHE_ROOT / "hub"
+NEXA_MODEL_EVAL_RESULTS_PATH = NEXA_CACHE_ROOT / "eval"
 NEXA_MODELS_HUB_OFFICIAL_DIR = NEXA_MODELS_HUB_DIR / "official"
 NEXA_MODELS_HUB_HF_DIR = NEXA_MODELS_HUB_DIR / "huggingface"
 NEXA_MODEL_LIST_PATH = NEXA_MODELS_HUB_DIR / "model_list.json"
@@ -35,6 +36,7 @@ class ModelType(Enum):
     COMPUTER_VISION = "Computer Vision"
     AUDIO = "Audio"
     MULTIMODAL = "Multimodal"
+    TEXT_EMBEDDING = "Text Embedding"
 
 
 NEXA_RUN_MODEL_MAP_TEXT = {
@@ -182,6 +184,20 @@ NEXA_RUN_MODEL_MAP_FLUX = {
     "FLUX.1-schnell:fp16": "FLUX.1-schnell:flux1-schnell-fp16",
 }
 
+NEXA_RUN_MODEL_MAP_TEXT_EMBEDDING = {
+    "mxbai": "mxbai-embed-large-v1:fp16",
+    "mxbai-embed-large-v1": "mxbai-embed-large-v1:fp16",
+    "mxbai-embed-large-v1:fp16": "mxbai-embed-large-v1:fp16",
+    "nomic": "nomic-embed-text-v1.5:fp16",
+    "nomic-embed-text-v1.5": "nomic-embed-text-v1.5:fp16",
+    "nomic-embed-text-v1.5:fp16": "nomic-embed-text-v1.5:fp16",
+    "all-MiniLM": "all-MiniLM-L6-v2:fp16",
+    "all-MiniLM-L6-v2": "all-MiniLM-L6-v2:fp16",
+    "all-MiniLM-L6-v2:fp16": "all-MiniLM-L6-v2:fp16",
+    "all-MiniLM-L12-v2": "all-MiniLM-L12-v2:fp16",
+    "all-MiniLM-L12-v2:fp16": "all-MiniLM-L12-v2:fp16",
+}
+
 NEXA_RUN_MODEL_MAP = {
     **NEXA_RUN_MODEL_MAP_TEXT,
     **NEXA_RUN_MODEL_MAP_VLM,
@@ -189,6 +205,7 @@ NEXA_RUN_MODEL_MAP = {
     **NEXA_RUN_MODEL_MAP_VOICE,
     **NEXA_RUN_MODEL_MAP_FUNCTION_CALLING,
     **NEXA_RUN_MODEL_MAP_FLUX,
+    **NEXA_RUN_MODEL_MAP_TEXT_EMBEDDING,
 }
 
 NEXA_RUN_CHAT_TEMPLATE_MAP = {
@@ -254,6 +271,7 @@ NEXA_STOP_WORDS_MAP = {"octopus-v2": ["<nexa_end>"], "octopus-v4": ["<nexa_end>"
 DEFAULT_TEXT_GEN_PARAMS = {
     "temperature": 0.7,
     "max_new_tokens": 2048,
+    "nctx": 2048,
     "top_k": 50,
     "top_p": 1.0,
 }
@@ -381,4 +399,8 @@ NEXA_OFFICIAL_MODELS_TYPE = {
     "whisper-small": ModelType.AUDIO,
     "whisper-base.en": ModelType.AUDIO,
     "whisper-base": ModelType.AUDIO,
+    "mxbai-embed-large-v1": ModelType.TEXT_EMBEDDING,
+    "nomic-embed-text-v1.5": ModelType.TEXT_EMBEDDING,
+    "all-MiniLM-L6-v2": ModelType.TEXT_EMBEDDING,
+    "all-MiniLM-L12-v2": ModelType.TEXT_EMBEDDING,
 }

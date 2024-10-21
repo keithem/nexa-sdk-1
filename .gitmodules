@@ -9,3 +9,7 @@
 [submodule "bark.cpp"]
 	path = bark.cpp
 	url = https://github.com/NexaAI/bark.cpp.git
+[submodule "nexa/eval/benchmark_tasks"]
+	path = nexa/eval/benchmark_tasks
+	url = https://github.com/NexaAI/benchmark-tasks.git
+	branch = main

@@ -1,6 +1,7 @@
 ## CLI Reference
 
 ### Overview
+
 ```
 usage: nexa [-h] [-V] {run,onnx,server,pull,remove,clean,list,login,whoami,logout} ...
 
@@ -11,7 +12,9 @@ positional arguments:
                         sub-command help
     run                 Run inference for various tasks using GGUF models.
     onnx                Run inference for various tasks using ONNX models.
-    server              Run the Nexa AI Text Generation Service
+    embed               Generate embeddings for text.
+    server              Run the Nexa AI Text Generation Service.
+    eval                Run the Nexa AI Evaluation Tasks.
     pull                Pull a model from official or hub.
     remove              Remove a model from local machine.
     clean               Clean up all model files.
@@ -93,7 +96,7 @@ By default, `nexa` will run gguf models. To run onnx models, use `nexa onnx MODE
 
 ```
 nexa run MODEL_PATH
-usage: nexa run [-h] [-t TEMPERATURE] [-m MAX_NEW_TOKENS] [-k TOP_K] [-p TOP_P] [-sw [STOP_WORDS ...]] [-pf] [-st] model_path
+usage: nexa run [-h] [-t TEMPERATURE] [-m MAX_NEW_TOKENS] [-k TOP_K] [-p TOP_P] [-sw [STOP_WORDS ...]] [-pf] [-st] [-lp] [-mt {NLP, COMPUTER_VISION, MULTIMODAL, AUDIO}] [-hf] model_path
 
 positional arguments:
   model_path            Path or identifier for the model in Nexa Model Hub
@@ -101,7 +104,10 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -pf, --profiling      Enable profiling logs for the inference process
-  -st, --streamlit      Run the inference in Streamlit UI
+  -st, --streamlit      Run the inference in Streamlit UI, can be used with -lp or -hf
+  -lp, --local_path     Indicate that the model path provided is the local path, must be used with -mt
+  -mt, --model_type     Indicate the model running type, must be used with -lp or -hf, choose from [NLP, COMPUTER_VISION, MULTIMODAL, AUDIO]
+  -hf, --huggingface    Load model from Hugging Face Hub, must be used with -mt
 
 Text generation options:
   -t, --temperature TEMPERATURE
@@ -112,6 +118,7 @@ Text generation options:
   -p, --top_p TOP_P     Top-p sampling parameter
   -sw, --stop_words [STOP_WORDS ...]
                         List of stop words for early stopping
+  --nctx TEXT_CONTEXT   Length of context window
 ```
 
 ##### Example
@@ -124,14 +131,17 @@ nexa run llama2
 
 ```
 nexa run MODEL_PATH
-usage: nexa run [-h] [-i2i] [-ns NUM_INFERENCE_STEPS] [-np NUM_IMAGES_PER_PROMPT] [-H HEIGHT] [-W WIDTH] [-g GUIDANCE_SCALE] [-o OUTPUT] [-s RANDOM_SEED] [-st] model_path
+usage: nexa run [-h] [-i2i] [-ns NUM_INFERENCE_STEPS] [-np NUM_IMAGES_PER_PROMPT] [-H HEIGHT] [-W WIDTH] [-g GUIDANCE_SCALE] [-o OUTPUT] [-s RANDOM_SEED] [-st] [-lp] [-mt {NLP, COMPUTER_VISION, MULTIMODAL, AUDIO}] [-hf] model_path
 
 positional arguments:
   model_path            Path or identifier for the model in Nexa Model Hub
 
 options:
   -h, --help            show this help message and exit
-  -st, --streamlit      Run the inference in Streamlit UI
+  -st, --streamlit      Run the inference in Streamlit UI, can be used with -lp or -hf
+  -lp, --local_path     Indicate that the model path provided is the local path, must be used with -mt
+  -mt, --model_type     Indicate the model running type, must be used with -lp or -hf, choose from [NLP, COMPUTER_VISION, MULTIMODAL, AUDIO]
+  -hf, --huggingface    Load model from Hugging Face Hub, must be used with -mt
 
 Image generation options:
   -i2i, --img2img       Whether to run image-to-image generation
@@ -166,7 +176,7 @@ nexa run sd1-4
 
 ```
 nexa run MODEL_PATH
-usage: nexa run [-h] [-t TEMPERATURE] [-m MAX_NEW_TOKENS] [-k TOP_K] [-p TOP_P] [-sw [STOP_WORDS ...]] [-pf] [-st] model_path
+usage: nexa run [-h] [-t TEMPERATURE] [-m MAX_NEW_TOKENS] [-k TOP_K] [-p TOP_P] [-sw [STOP_WORDS ...]] [-pf] [-st] [-lp] [-mt {NLP, COMPUTER_VISION, MULTIMODAL, AUDIO}] [-hf] model_path
 
 positional arguments:
   model_path            Path or identifier for the model in Nexa Model Hub
@@ -174,7 +184,10 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -pf, --profiling      Enable profiling logs for the inference process
-  -st, --streamlit      Run the inference in Streamlit UI
+  -st, --streamlit      Run the inference in Streamlit UI, can be used with -lp or -hf
+  -lp, --local_path     Indicate that the model path provided is the local path, must be used with -mt
+  -mt, --model_type     Indicate the model running type, must be used with -lp or -hf, choose from [NLP, COMPUTER_VISION, MULTIMODAL, AUDIO]
+  -hf, --huggingface    Load model from Hugging Face Hub, must be used with -mt
 
 VLM generation options:
   -t, --temperature TEMPERATURE
@@ -185,6 +198,7 @@ VLM generation options:
   -p, --top_p TOP_P     Top-p sampling parameter
   -sw, --stop_words [STOP_WORDS ...]
                         List of stop words for early stopping
+  --nctx TEXT_CONTEXT   Length of context window
 ```
 
 ##### Example
@@ -197,14 +211,17 @@ nexa run nanollava
 
 ```
 nexa run MODEL_PATH
-usage: nexa run [-h] [-o OUTPUT_DIR] [-b BEAM_SIZE] [-l LANGUAGE] [--task TASK] [-t TEMPERATURE] [-c COMPUTE_TYPE] [-st] model_path
+usage: nexa run [-h] [-o OUTPUT_DIR] [-b BEAM_SIZE] [-l LANGUAGE] [--task TASK] [-t TEMPERATURE] [-c COMPUTE_TYPE] [-st] [-lp] [-mt {NLP, COMPUTER_VISION, MULTIMODAL, AUDIO}] [-hf] model_path
 
 positional arguments:
   model_path            Path or identifier for the model in Nexa Model Hub
 
 options:
   -h, --help            show this help message and exit
-  -st, --streamlit      Run the inference in Streamlit UI
+  -st, --streamlit      Run the inference in Streamlit UI, can be used with -lp or -hf
+  -lp, --local_path     Indicate that the model path provided is the local path, must be used with -mt
+  -mt, --model_type     Indicate the model running type, must be used with -lp or -hf, choose from [NLP, COMPUTER_VISION, MULTIMODAL, AUDIO]
+  -hf, --huggingface    Load model from Hugging Face Hub, must be used with -mt
 
 Automatic Speech Recognition options:
   -b, --beam_size BEAM_SIZE
@@ -222,19 +239,51 @@ Automatic Speech Recognition options:
 nexa run faster-whisper-tiny
 ```
 
+### Generate Embeddings
+
+#### Generate Text Embeddings
+
+```
+nexa embed MODEL_PATH
+usage: nexa embed [-h] [-lp] [-hf] [-n] [-nt] model_path prompt
+
+positional arguments:
+  model_path            Path or identifier for the model in Nexa Model Hub
+  prompt                Prompt to generate embeddings
+
+options:
+  -h, --help            show this help message and exit
+  -lp, --local_path     Indicate that the model path provided is the local path, must be used with -mt
+  -hf, --huggingface    Load model from Hugging Face Hub, must be used with -mt
+  -n, --normalize       Normalize the embeddings
+  -nt, --no_truncate    Not truncate the embeddings
+```
+
+#### Example
+
+```
+nexa embed mxbai "I love Nexa AI."
+nexa embed nomic "I love Nexa AI." >> generated_embeddings.txt
+nexa embed nomic-embed-text-v1.5:fp16 "I love Nexa AI."
+nexa embed sentence-transformers/all-MiniLM-L6-v2:gguf-fp16 "I love Nexa AI." >> generated_embeddings.txt
+```
+
 ### Start Local Server
 
 Start a local server using models on your local computer.
 
 ```
 nexa server MODEL_PATH
-usage: nexa server [-h] [--host HOST] [--port PORT] [--reload] model_path
+usage: nexa server [-h] [--host HOST] [--port PORT] [--reload] [-lp] [-mt {NLP, COMPUTER_VISION, MULTIMODAL, AUDIO}] [-hf] model_path
 
 positional arguments:
   model_path   Path or identifier for the model in S3
 
 options:
   -h, --help   show this help message and exit
+  -lp, --local_path     Indicate that the model path provided is the local path, must be used with -mt
+  -mt, --model_type     Indicate the model running type, must be used with -lp or -hf, choose from [NLP, COMPUTER_VISION, MULTIMODAL, AUDIO]
+  -hf, --huggingface    Load model from Hugging Face Hub, must be used with -mt
   --host HOST  Host to bind the server to
   --port PORT  Port to bind the server to
   --reload     Enable automatic reloading on code changes
@@ -244,6 +293,28 @@ options:
 
 ```
 nexa server llama2
+```
+
+### Run Model Evaluation
+
+Run evaluation using models on your local computer.
+
+```
+usage: nexa eval model_path [-h] [--tasks TASKS] [--limit LIMIT]
+
+positional arguments:
+  model_path            Path or identifier for the model in Nexa Model Hub
+
+options:
+  -h, --help            show this help message and exit
+  --tasks TASKS         Tasks to evaluate, comma-separated
+  --limit LIMIT         Limit the number of examples per task. If <1, limit is a percentage of the total number of examples.
+```
+
+#### Examples
+
+```
+nexa eval phi3 --tasks ifeval --limit 0.5
 ```
 
 ### Model Path Format
@@ -257,4 +328,4 @@ For `model_path` in nexa commands, it's better to follow the standard format to 
 
 - `gemma-2b:q4_0`
 - `Meta-Llama-3-8B-Instruct:onnx-cpu-int8`
-- `alanzhuly/Qwen2-1B-Instruct:q4_0`
+- `liuhaotian/llava-v1.6-vicuna-7b:gguf-q4_0`
