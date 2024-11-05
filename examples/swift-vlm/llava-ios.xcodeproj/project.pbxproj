@@ -27,7 +27,6 @@
 		648FBE182B7C61A40069ED0E /* llava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 648FBE162B7C61A40069ED0E /* llava.cpp */; };
 		648FBE1B2B7C62010069ED0E /* clip.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 648FBE192B7C62010069ED0E /* clip.cpp */; };
 		64A120852BD7E183002E1763 /* ThumbnailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64A120842BD7E183002E1763 /* ThumbnailView.swift */; };
-		D3A2F26B2CD990970085D160 /* NexaSwift in Frameworks */ = {isa = PBXBuildFile; productRef = D3A2F26A2CD990970085D160 /* NexaSwift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,7 +66,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D3A2F26B2CD990970085D160 /* NexaSwift in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -198,7 +196,6 @@
 			);
 			name = "llava-ios";
 			packageProductDependencies = (
-				D3A2F26A2CD990970085D160 /* NexaSwift */,
 			);
 			productName = "llava-ios";
 			productReference = 640144EA2B6D9C3E004E9B6F /* llava-ios.app */;
@@ -230,7 +227,6 @@
 			);
 			mainGroup = 640144E12B6D9C3E004E9B6F;
 			packageReferences = (
-				D3A2F2692CD990970085D160 /* XCRemoteSwiftPackageReference "nexa-sdk" */,
 			);
 			productRefGroup = 640144EB2B6D9C3E004E9B6F /* Products */;
 			projectDirPath = "";
@@ -492,25 +488,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		D3A2F2692CD990970085D160 /* XCRemoteSwiftPackageReference "nexa-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/NexaAI/nexa-sdk";
-			requirement = {
-				branch = "swift-group";
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		D3A2F26A2CD990970085D160 /* NexaSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D3A2F2692CD990970085D160 /* XCRemoteSwiftPackageReference "nexa-sdk" */;
-			productName = NexaSwift;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		6437EDA02B794FEC00DC163F /* AppModel.xcdatamodeld */ = {
