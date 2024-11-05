@@ -1,0 +1,24 @@
+{
+  "originHash" : "ca6d320ea17249b0413c8d331e973502a800f6745199948eb60d5eec053a472e",
+  "pins" : [
+    {
+      "identity" : "llama.cpp",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ggerganov/llama.cpp.git",
+      "state" : {
+        "branch" : "master",
+        "revision" : "a9e8a9a0306a8093eef93b0022d9f45510490072"
+      }
+    },
+    {
+      "identity" : "nexa-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/NexaAI/nexa-sdk",
+      "state" : {
+        "branch" : "swift-group",
+        "revision" : "bbf388de6bc8401f2bac275537edaaf0ae305a8d"
+      }
+    }
+  ],
+  "version" : 3
+}
