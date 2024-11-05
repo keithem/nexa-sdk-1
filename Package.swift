@@ -23,9 +23,6 @@ let package = Package(
             dependencies: [
                 .product(name: "llama", package: "llama.cpp")
             ],
-            cxxSettings: [
-                .headerSearchPath("Llava"),
-            ],
             path: "swift/Sources/NexaSwift"),
         .testTarget(
             name: "NexaSwiftTests", 
