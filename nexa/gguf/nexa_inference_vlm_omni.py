@@ -1,43 +1,22 @@
+
 import ctypes
 import logging
 import os
 from pathlib import Path
-from nexa.utils import SpinningCursorAnimation, nexa_prompt
+from nexa.utils import nexa_prompt, SpinningCursorAnimation
 from nexa.constants import (
     DEFAULT_TEXT_GEN_PARAMS,
-    NEXA_RUN_MODEL_MAP_AUDIO_LM,
-    NEXA_RUN_AUDIO_LM_PROJECTOR_MAP,
+    NEXA_RUN_OMNI_VLM_PROJECTOR_MAP,
+    NEXA_RUN_OMNI_VLM_MAP
 )
 from nexa.gguf.lib_utils import is_gpu_available
-from nexa.gguf.llama import audio_lm_cpp
+from nexa.gguf.llama import omni_vlm_cpp
 from nexa.gguf.llama._utils_transformers import suppress_stdout_stderr
 from nexa.general import pull_model
 
-
-def is_qwen(model_name):
-    if "qwen" in model_name.lower():  # TEMPORARY SOLUTION : this hardcode can be risky
-        return True
-    return False
-
-
-assert set(NEXA_RUN_MODEL_MAP_AUDIO_LM.keys()) == set(
-    NEXA_RUN_AUDIO_LM_PROJECTOR_MAP.keys()
-), "Model, projector, and handler should have the same keys"
-
-
-class NexaAudioLMInference:
+class NexaOmniVlmInference:
     """
-    A class used for loading Bark text-to-speech models and running text-to-speech generation.
-
-    Methods:
-        run: Run the audio LM generation loop.
-
-    Args:
-        model_path (str): Path to the model file.
-        mmproj_path (str): Path to the audio projector file.
-        n_gpu_layers(int): Number of gpu layers to use for processing. Defaults to -1.
-        output_dir (str): Output directory for tts. Defaults to "tts".
-        verbosity (int): Verbosity level for the Bark model. Defaults to 0.
+    A class used for vision language model inference.
     """
 
     def __init__(
@@ -55,7 +34,7 @@ class NexaAudioLMInference:
         self.params.update(kwargs)
         self.model = None
         self.projector = None
-        self.projector_path = NEXA_RUN_AUDIO_LM_PROJECTOR_MAP.get(model_path, None)
+        self.projector_path = NEXA_RUN_OMNI_VLM_PROJECTOR_MAP.get(model_path, None)
         self.downloaded_path = local_path
         self.projector_downloaded_path = projector_local_path
         self.device = device
@@ -72,14 +51,14 @@ class NexaAudioLMInference:
             # when running from local, both path should be provided
             pass
         elif self.downloaded_path is not None:
-            if model_path in NEXA_RUN_MODEL_MAP_AUDIO_LM:
-                self.projector_path = NEXA_RUN_AUDIO_LM_PROJECTOR_MAP[model_path]
+            if model_path in NEXA_RUN_OMNI_VLM_MAP:
+                self.projector_path = NEXA_RUN_OMNI_VLM_PROJECTOR_MAP[model_path]
                 self.projector_downloaded_path, _ = pull_model(
                     self.projector_path, **kwargs
                 )
-        elif model_path in NEXA_RUN_MODEL_MAP_AUDIO_LM:
-            self.model_path = NEXA_RUN_MODEL_MAP_AUDIO_LM[model_path]
-            self.projector_path = NEXA_RUN_AUDIO_LM_PROJECTOR_MAP[model_path]
+        elif model_path in NEXA_RUN_OMNI_VLM_MAP:
+            self.model_path = NEXA_RUN_OMNI_VLM_MAP[model_path]
+            self.projector_path = NEXA_RUN_OMNI_VLM_PROJECTOR_MAP[model_path]
             self.downloaded_path, _ = pull_model(self.model_path, **kwargs)
             self.projector_downloaded_path, _ = pull_model(
                 self.projector_path, **kwargs
@@ -102,73 +81,44 @@ class NexaAudioLMInference:
         else:
             logging.error("VLM user model from hub is not supported yet.")
             exit(1)
-
-        if self.downloaded_path is None or self.projector_downloaded_path is None:
-            logging.error(
-                f"Model ({model_path}) is not applicable. Please refer to our docs for proper usage.",
-                exc_info=True,
-            )
-            exit(1)
-        self.is_qwen = is_qwen(self.downloaded_path) # TEMPORARY SOLUTION : this hardcode can be risky
-        self.ctx_params = audio_lm_cpp.context_default_params(self.is_qwen)
         with suppress_stdout_stderr():
             self._load_model()
 
     @SpinningCursorAnimation()
     def _load_model(self):
         try:
-            self.ctx_params.model = ctypes.c_char_p(
+            self.ctx_params_model = ctypes.c_char_p(
                 self.downloaded_path.encode("utf-8")
             )
-            self.ctx_params.mmproj = ctypes.c_char_p(
+            self.ctx_params_mmproj = ctypes.c_char_p(
                 self.projector_downloaded_path.encode("utf-8")
             )
-            self.ctx_params.n_gpu_layers = (
-                0x7FFFFFFF if self.n_gpu_layers == -1 else self.n_gpu_layers
-            )  # 0x7FFFFFFF is INT32 max, will be auto set to all layers
-
-            self.context = audio_lm_cpp.init_context(
-                ctypes.byref(self.ctx_params), is_qwen=self.is_qwen
-            )
-            if not self.context:
-                raise RuntimeError("Failed to load audio language model")
-            logging.debug("Model loaded successfully")
+            omni_vlm_cpp.omnivlm_init(self.ctx_params_model, self.ctx_params_mmproj)
         except Exception as e:
             logging.error(f"Error loading model: {e}")
             raise
-
+        
     def run(self):
         while True:
             try:
-                while True:
-                    audio_path = nexa_prompt("Enter the path to your audio file (required): ")
-                    if os.path.exists(audio_path):
-                        break
-                    print(f"'{audio_path}' is not a valid audio path. Please try again.")
+                image_path = nexa_prompt("Image Path (required): ")
+                if not os.path.exists(image_path):
+                    print(f"Image path: {image_path} not found, running omni VLM without image input.")
 
-                user_input = nexa_prompt("Enter text (leave empty if no prompt): ")
-
-                self.ctx_params.file = ctypes.c_char_p(audio_path.encode("utf-8"))
-                self.ctx_params.prompt = ctypes.c_char_p(user_input.encode("utf-8"))
-
-                response = audio_lm_cpp.process_full(
-                    self.context, ctypes.byref(self.ctx_params), is_qwen=self.is_qwen
-                ).decode("utf-8")
-                print(response)
+                user_input = nexa_prompt()
+                image_path = ctypes.c_char_p(image_path.encode("utf-8"))
+                user_input = ctypes.c_char_p(user_input.encode("utf-8"))
+                omni_vlm_cpp.omnivlm_inference(user_input, image_path)
 
             except KeyboardInterrupt:
                 print("\nExiting...")
                 break
-
             except Exception as e:
                 logging.error(f"\nError during audio generation: {e}", exc_info=True)
+            print("\n")
 
     def __del__(self):
-        """
-        Destructor to free the Bark context when the instance is deleted.
-        """
-        if self.context:
-            audio_lm_cpp.free(self.context, is_qwen=self.is_qwen)
+        omni_vlm_cpp.omnivlm_free()
 
 
 if __name__ == "__main__":
@@ -195,5 +145,5 @@ if __name__ == "__main__":
     model_path = kwargs.pop("model_path")
     device = kwargs.pop("device", "auto")
 
-    inference = NexaAudioLMInference(model_path, device=device, **kwargs)
+    inference = NexaOmniVlmInference(model_path, device=device, **kwargs)
     inference.run()
