@@ -24,7 +24,8 @@ Nexa SDK is a comprehensive toolkit for supporting **ONNX** and **GGML** models.
 <video src="https://user-images.githubusercontent.com/assets/375570dc-0e7a-4a99-840d-c1ef6502e5aa.mp4" autoplay muted loop playsinline style="max-width: 100%;"></video>
 
 ## Latest News 🔥
-
+- [2024/11] Support Nexa AI's own vision language model (0.9B parameters): `nexa run omnivision` and audio language model (2.9B): `nexa run omniaudio`
+- [2024/11] Support audio language model: `nexa run qwen2audio`, **we are the first open-source toolkit to support audio language model with GGML tensor library.**
 - [2024/10] Support embedding model: `nexa embed <model_path> <prompt>`
 - [2024/10] Support pull and run supported Computer Vision models in GGUF format from HuggingFace: `nexa run -hf <model_id> -mt COMPUTER_VISION`
 - [2024/10] Support VLM in local server.
@@ -248,8 +249,16 @@ Our on-device model hub offers all types of quantized models (text, image, audio
 Supported models (full list at [Model Hub](https://nexa.ai/models)):
 | Model | Type | Format | Command |
 | ------------------------------------------------------------------------------------------------------- | --------------- | --------- | -------------------------------------- |
+| [omniaudio](https://nexa.ai/NexaAI/Octo-omni-audio/gguf-q4_0/readme) | AudioLM | GGUF | `nexa run omniaudio` |
+| [qwen2audio](https://www.nexaai.com/qnguyen3/nanoLLaVA/gguf-fp16/readme) | AudioLM | GGUF | `nexa run qwen2audio` |
 | [octopus-v2](https://www.nexaai.com/NexaAI/Octopus-v2/gguf-q4_0/readme) | NLP | GGUF | `nexa run octopus-v2` |
-| [octopus-v4](https://www.nexaai.com/NexaAI/Octopus-v4/gguf-q4_0/readme) | NLP | GGUF | `nexa run octopus-v4` |
+| [octo-net](https://www.nexaai.com/NexaAI/Octo-net/gguf-q4_0/readme) | NLP | GGUF | `nexa run octo-net` |
+| [omnivision](https://nexa.ai/NexaAI/Octo-omni-vision/gguf-fp16/readme) | Multimodal | GGUF | `nexa run omnivision` |
+| [nanollava](https://www.nexaai.com/qnguyen3/nanoLLaVA/gguf-fp16/readme) | Multimodal | GGUF | `nexa run nanollava` |
+| [llava-phi3](https://www.nexaai.com/xtuner/llava-phi-3-mini/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava-phi3` |
+| [llava-llama3](https://www.nexaai.com/xtuner/llava-llama-3-8b-v1.1/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava-llama3` |
+| [llava1.6-mistral](https://www.nexaai.com/liuhaotian/llava-v1.6-mistral-7b/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava1.6-mistral` |
+| [llava1.6-vicuna](https://www.nexaai.com/liuhaotian/llava-v1.6-vicuna-7b/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava1.6-vicuna` |
 | [gpt2](https://nexaai.com/openai/gpt2/gguf-q4_0/readme) | NLP | GGUF | `nexa run gpt2` |
 | [tinyllama](https://www.nexaai.com/TinyLlama/TinyLlama-1.1B-Chat-v1.0/gguf-fp16/readme) | NLP | GGUF | `nexa run tinyllama` |
 | [llama2](https://www.nexaai.com/meta/Llama2-7b-chat/gguf-q4_0/readme) | NLP | GGUF/ONNX | `nexa run llama2` |
@@ -276,11 +285,6 @@ Supported models (full list at [Model Hub](https://nexa.ai/models)):
 | [phi3.5](https://nexaai.com/microsoft/Phi-3.5-mini-instruct/gguf-q4_0/readme) | NLP | GGUF | `nexa run phi3.5` |
 | [openelm](https://nexaai.com/apple/OpenELM-3B/gguf-q4_K_M/readme) | NLP | GGUF | `nexa run openelm` |
 | [AMD-Llama-135m](https://nexaai.com/amd/AMD-Llama-135m/gguf-fp16/readme) | NLP | GGUF | `nexa run AMD-Llama-135m:fp16` |
-| [nanollava](https://www.nexaai.com/qnguyen3/nanoLLaVA/gguf-fp16/readme) | Multimodal | GGUF | `nexa run nanollava` |
-| [llava-phi3](https://www.nexaai.com/xtuner/llava-phi-3-mini/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava-phi3` |
-| [llava-llama3](https://www.nexaai.com/xtuner/llava-llama-3-8b-v1.1/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava-llama3` |
-| [llava1.6-mistral](https://www.nexaai.com/liuhaotian/llava-v1.6-mistral-7b/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava1.6-mistral` |
-| [llava1.6-vicuna](https://www.nexaai.com/liuhaotian/llava-v1.6-vicuna-7b/gguf-q4_0/readme) | Multimodal | GGUF | `nexa run llava1.6-vicuna` |
 | [stable-diffusion-v1-4](https://www.nexaai.com/runwayml/stable-diffusion-v1-4/gguf-q4_0/readme) | Computer Vision | GGUF | `nexa run sd1-4` |
 | [stable-diffusion-v1-5](https://www.nexaai.com/runwayml/stable-diffusion-v1-5/gguf-q4_0/readme) | Computer Vision | GGUF/ONNX | `nexa run sd1-5` |
 | [stable-diffusion-v2-1](https://nexaai.com/StabilityAI/stable-diffusion-v2-1/gguf-q4_0/readme) | Computer Vision | GGUF | `nexa run sd2-1` |
@@ -340,4 +344,5 @@ We would like to thank the following projects:
 
 - [llama.cpp](https://github.com/ggerganov/llama.cpp)
 - [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp)
+- [bark.cpp](https://github.com/PABannier/bark.cpp)
 - [optimum](https://github.com/huggingface/optimum)
