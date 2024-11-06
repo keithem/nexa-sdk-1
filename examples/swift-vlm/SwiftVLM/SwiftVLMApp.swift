@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct llava_iosApp: App {
+struct SwiftVLMApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
