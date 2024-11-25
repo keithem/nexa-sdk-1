@@ -175,6 +175,18 @@ class NexaOmniVlmInference:
         sys.argv = ["streamlit", "run", str(streamlit_script_path), model_path, str(is_local_path), str(hf), str(projector_local_path)]
         sys.exit(stcli.main())
 
+    def run_gradio(self, model_path: str, is_local_path = False, hf = False, projector_local_path = None):
+        """
+        Run the Gradio UI.
+        """
+        logging.info("Running Gradio UI...")
+
+        gradio_script_path = (
+            Path(os.path.abspath(__file__)).parent / "gradio" / "gradio_vlm_omni.py"
+        )
+
+        sys.argv = ["gradio", "run", str(gradio_script_path), model_path, str(is_local_path), str(hf), str(projector_local_path)]
+        os.system(f"python {gradio_script_path} {model_path} {is_local_path} {hf} {projector_local_path}")
 
 if __name__ == "__main__":
     import argparse
@@ -202,6 +214,12 @@ if __name__ == "__main__":
         help="Run the inference in Streamlit UI",
     )
     parser.add_argument(
+        "-g",
+        "--gradio",
+        action="store_true",
+        help="Run the inference in Gradio UI",
+    )
+    parser.add_argument(
         "--omni_vlm_version",
         type=str,
         choices=["vlm-81-ocr", "vlm-81-instruct", "nano-vlm-instruct"],
@@ -217,5 +235,7 @@ if __name__ == "__main__":
     inference = NexaOmniVlmInference(model_path, device=device, **kwargs)
     if args.streamlit:
         inference.run_streamlit(model_path)
+    elif args.gradio:
+        inference.run_gradio(model_path)
     else:
         inference.run()
