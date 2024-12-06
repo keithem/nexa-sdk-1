@@ -120,7 +120,7 @@ if(WIN32)
 endif()
 
 # stable_diffusion_cpp project
-option(STABLE_DIFFUSION_BUILD "Build stable-diffusion.cpp" ON)
+option(STABLE_DIFFUSION_BUILD "Build stable-diffusion.cpp" OFF)
 if(STABLE_DIFFUSION_BUILD)
     ExternalProject_Add(stable_diffusion_project
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/dependency/stable-diffusion.cpp

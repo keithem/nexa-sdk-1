@@ -2,40 +2,46 @@ import sys
 import ctypes
 import logging
 
-from nexa.gguf.llama import llama_cpp
+import nexa.gguf.llama.llama_cpp as llama_cpp
 
-# Mapping ggml log levels to Python logging levels
+# enum ggml_log_level {
+#     GGML_LOG_LEVEL_NONE  = 0,
+#     GGML_LOG_LEVEL_INFO  = 1,
+#     GGML_LOG_LEVEL_WARN  = 2,
+#     GGML_LOG_LEVEL_ERROR = 3,
+#     GGML_LOG_LEVEL_DEBUG = 4,
+#     GGML_LOG_LEVEL_CONT  = 5, // continue previous log
+# };
 GGML_LOG_LEVEL_TO_LOGGING_LEVEL = {
-    2: logging.ERROR,
-    3: logging.WARNING,
-    4: logging.INFO,
+    0: logging.CRITICAL,
+    1: logging.INFO,
+    2: logging.WARNING,
+    3: logging.ERROR,
+    4: logging.DEBUG,
     5: logging.DEBUG,
 }
 
-# Initialize the logger for llama-cpp-python
-logger = logging.getLogger("nexa-transformers")
+logger = logging.getLogger("llama-cpp-python")
 
-# # Define the log callback function
-# @llama_cpp.llama_log_callback
-# def llama_log_callback(
-#     level: int,
-#     text: bytes,
-#     user_data: ctypes.c_void_p,
-# ):
-#     # Check if the logger is set to log the provided level
-#     if logger.level <= GGML_LOG_LEVEL_TO_LOGGING_LEVEL[level]:
-#         # Print the log message to stderr
-#         print(text.decode("utf-8"), end="", flush=True, file=sys.stderr)
+_last_log_level = GGML_LOG_LEVEL_TO_LOGGING_LEVEL[0]
 
-# # Set the log callback function for llama_cpp
-# llama_cpp.llama_log_set(llama_log_callback, ctypes.c_void_p(0))
+# typedef void (*ggml_log_callback)(enum ggml_log_level level, const char * text, void * user_data);
+@llama_cpp.llama_log_callback
+def llama_log_callback(
+    level: int,
+    text: bytes,
+    user_data: ctypes.c_void_p,
+):
+    # TODO: Correctly implement continue previous log
+    global _last_log_level
+    log_level = GGML_LOG_LEVEL_TO_LOGGING_LEVEL[level] if level != 5 else _last_log_level
+    if logger.level <= GGML_LOG_LEVEL_TO_LOGGING_LEVEL[level]:
+        print(text.decode("utf-8"), end="", flush=True, file=sys.stderr)
+    _last_log_level = log_level
 
-# Utility function to set verbosity
+
+llama_cpp.llama_log_set(llama_log_callback, ctypes.c_void_p(0))
+
+
 def set_verbose(verbose: bool):
     logger.setLevel(logging.DEBUG if verbose else logging.ERROR)
-
-# Example usage
-if __name__ == "__main__":
-    # Set the verbosity based on a condition or user input
-    set_verbose(False)
-    # Rest of your application code here

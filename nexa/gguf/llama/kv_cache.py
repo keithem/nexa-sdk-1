@@ -3,8 +3,8 @@ from typing import Any, Dict
 
 def run_inference_with_disk_cache(
     model: Any, 
-    cache_prompt: str, 
-    total_prompt: str, 
+    cache_prompt: str,
+    total_prompt: str,
     use_cache: bool = True, 
     cache_dir: str = "llama.cache", 
     **kwargs: Dict[str, Any]
@@ -35,12 +35,10 @@ def run_inference_with_disk_cache(
         model.set_cache(cache_context)
         # Convert prompt to tokens for cache key
         prompt_tokens = model.tokenize(cache_prompt.encode("utf-8"))
-
         try:
             # Try to load existing cache
             cached_state = cache_context[prompt_tokens]
             model.load_state(cached_state)
-
             output = model(
                 total_prompt,
                 max_tokens=max_tokens,
@@ -59,7 +57,6 @@ def run_inference_with_disk_cache(
             )
             # Save the state to cache
             cache_context[prompt_tokens] = model.save_state()
-
             # Generate output after creating cache
             output = model(
                 total_prompt,
@@ -73,7 +70,6 @@ def run_inference_with_disk_cache(
     else:
         model.reset()
         model.set_cache(None)
-
         output = model(
             total_prompt,
             max_tokens=max_tokens,
