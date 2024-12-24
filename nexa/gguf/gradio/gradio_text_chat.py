@@ -1,99 +1,79 @@
 import gradio as gr
 from nexa.gguf.nexa_inference_text import NexaTextInference
+from nexa.gguf.llama._utils_transformers import suppress_stdout_stderr
 from nexa.general import pull_model
 
-# --------------------------------------------------------------------
-# 1. 初始化模型相关的变量（保留原先的 is_local_path, hf, nexa_model 等）
-# --------------------------------------------------------------------
 nexa_model = None
 is_local_path = True
 hf = False
+default_model = "Llama3.2-3B-Instruct:q4_0"  
 
-# --------------------------------------------------------------------
-# 2. 默认模型及其本地路径（不做模型选择，保持本地加载）
-# --------------------------------------------------------------------
-default_model = "Llama3.2-3B-Instruct:q4_0"
 local_model_path = "/Users/chenzekai/.cache/nexa/hub/official/Llama3.2-3B-Instruct/q4_0.gguf"
 
-# --------------------------------------------------------------------
-# 3. 加载模型函数
-# --------------------------------------------------------------------
 def load_model(model_path):
-    """
-    因为 is_local_path=True，这里直接初始化本地模型。
-    如果需要更多初始化参数，可在此处添加。
-    """
-    try:
-        # 如果模型已经在本地，不需要再次从远程 pull，则可注释 pull_model
-        # local_path, _ = pull_model(model_path)
-        nexa_model_instance = NexaTextInference(
-            model_path=model_path,
-            local_path=local_model_path
-        )
-        return nexa_model_instance
-    except Exception as e:
-        print(f"Failed to load model: {e}")
-        return None
 
-# --------------------------------------------------------------------
-# 4. 在启动时加载模型
-# --------------------------------------------------------------------
+    nexa_model = NexaTextInference(
+        model_path=model_path,
+        local_path=local_model_path,
+    )
+    return nexa_model
+
+
 try:
     nexa_model = load_model(default_model)
 except Exception as e:
     nexa_model = None
     print(f"Failed to load model: {e}")
 
-# --------------------------------------------------------------------
-# 5. 处理文本输入的函数（更新：消费生成器并返回完整文本）
-# --------------------------------------------------------------------
-def process_text_fn(
-    user_input,
-    temperature,
-    max_new_tokens,
-    top_k,
-    top_p,
-    context_length
-):
-    """
-    将用户文本与生成参数一起传递给模型进行推理，并返回模型输出。
-    """
+
+def process_text_fn(user_input, temperature, max_new_tokens, top_k, top_p, nctx):
+    
     if not nexa_model:
-        return "No model loaded. Please load a model first."
-    if not user_input:
-        return "Please provide a prompt."
+        return "No model loaded. Please check the local path or model loading."
+
+    nexa_model.params.update({
+        "temperature": temperature,
+        "max_new_tokens": max_new_tokens,
+        "top_k": top_k,
+        "top_p": top_p,
+        "nctx": nctx,
+    })
 
     try:
-        # 更新模型内部参数
-        nexa_model.params["temperature"] = temperature
-        nexa_model.params["max_new_tokens"] = max_new_tokens
-        nexa_model.params["top_k"] = top_k
-        nexa_model.params["top_p"] = top_p
-        nexa_model.params["nctx"] = context_length
-
-        # 原本 _complete() 返回生成器，这里逐个拼接生成完整字符串
-        response_iter = nexa_model._complete(user_input)
-        response_text = ""
-        for chunk in response_iter:
-            choice = chunk["choices"][0]
-            if "text" in choice:
-                token = choice["text"]
-            elif "delta" in choice and "content" in choice["delta"]:
-                token = choice["delta"]["content"]
-            else:
-                token = ""
-            response_text += token
-
-        return response_text
+        
+        if hasattr(nexa_model, "chat_format") and nexa_model.chat_format:
+            
+            result = ""
+            with suppress_stdout_stderr():
+                for chunk in nexa_model._chat(user_input):
+                    choice = chunk["choices"][0]
+                    if "delta" in choice:
+                        delta = choice["delta"]
+                        content = delta.get("content", "")
+                    else:
+                        content = choice.get("text", "")
+                    result += content
+            return result
+        else:
+            
+            result = ""
+            with suppress_stdout_stderr():
+                for chunk in nexa_model._complete(user_input):
+                    choice = chunk["choices"][0]
+                    if "text" in choice:
+                        delta = choice["text"]
+                    elif "delta" in choice:
+                        delta = choice["delta"]["content"]
+                    else:
+                        delta = ""
+                    result += delta
+            return result
 
     except Exception as e:
         return f"Error during text generation: {e}"
 
-# --------------------------------------------------------------------
-# 6. Gradio 界面搭建
-# --------------------------------------------------------------------
 with gr.Blocks() as demo:
-    # 标题和徽标
+    
     gr.HTML(
         """
         <div style="display: flex; align-items: center; margin-bottom: 5px; padding-top: 10px;">
@@ -106,7 +86,7 @@ with gr.Blocks() as demo:
         </div>
         """
     )
-    # Powered by + Model path
+
     gr.HTML(
         f"""
         <div style="font-family: Arial, sans-serif; font-size: 1em; color: #444;">
@@ -116,67 +96,78 @@ with gr.Blocks() as demo:
         """
     )
 
-    # -----------
-    # Generation Parameters
-    # -----------
-    gr.HTML("<h3 style='font-family: Arial, sans-serif; font-size: 1.2em; font-weight: bold;'>Generation Parameters</h3>")
-    with gr.Row():
-        temperature_slider = gr.Slider(
-            label="Temperature",
-            minimum=0.0, maximum=1.0, step=0.01, value=0.7
+    
+    with gr.Group():
+        gr.HTML(
+            """
+            <h2 style='font-family: Arial, sans-serif; font-size: 1.3em; font-weight: bold; margin-bottom: 0.2em;'>
+                Generation Parameters
+            </h2>
+            """
         )
-        max_new_tokens_slider = gr.Slider(
-            label="Max New Tokens",
-            minimum=1, maximum=500, step=1, value=128
-        )
-    with gr.Row():
-        top_k_slider = gr.Slider(
-            label="Top K",
-            minimum=1, maximum=100, step=1, value=40
-        )
-        top_p_slider = gr.Slider(
-            label="Top P",
-            minimum=0.0, maximum=1.0, step=0.01, value=0.9
-        )
-    with gr.Row():
-        context_length_slider = gr.Slider(
-            label="Context length",
-            minimum=1000, maximum=9999, step=1, value=2048
-        )
+        with gr.Row():
+            temperature_slider = gr.Slider(
+                label="Temperature",
+                minimum=0.00,
+                maximum=1.00,
+                step=0.01,
+                value=0.7  
+            )
+            max_tokens_slider = gr.Slider(
+                label="Max New Tokens",
+                minimum=1,
+                maximum=500,
+                step=1,
+                value=256 
+            )
+        with gr.Row():
+            top_k_slider = gr.Slider(
+                label="Top K",
+                minimum=1,
+                maximum=100,
+                step=1,
+                value=50
+            )
+            top_p_slider = gr.Slider(
+                label="Top P",
+                minimum=0.00,
+                maximum=1.00,
+                step=0.01,
+                value=1.0
+            )
+        with gr.Row():
+            nctx_slider = gr.Slider(
+                label="Context length",
+                minimum=1000,
+                maximum=9999,
+                step=1,
+                value=2048
+            )
 
-    # ----------
-    # 文本输入
-    # ----------
-    user_input_box = gr.Textbox(
-        placeholder="Say something...",
+
+    user_text_input = gr.Textbox(
+        placeholder="Say something",
         lines=3,
-        show_label=False
+        label="",  
     )
 
-    # -----------
-    # 触发按钮 + 输出
-    # -----------
+
     send_button = gr.Button("Send")
-    model_response = gr.Textbox(
-        label="Model Response",
-        interactive=False
-    )
+    model_response = gr.Textbox(label="Model Response", interactive=False)
+
 
     send_button.click(
         fn=process_text_fn,
         inputs=[
-            user_input_box,
+            user_text_input,
             temperature_slider,
-            max_new_tokens_slider,
+            max_tokens_slider,
             top_k_slider,
             top_p_slider,
-            context_length_slider
+            nctx_slider
         ],
         outputs=model_response
     )
 
-# --------------------------------------------------------------------
-# 7. 启动 Gradio 应用
-# --------------------------------------------------------------------
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860, share=True)
