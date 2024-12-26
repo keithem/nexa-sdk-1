@@ -108,7 +108,7 @@ def get_user_info(token):
         return None
 
 
-def pull_model(model_path, hf = False, ms = False, **kwargs):
+def pull_model(model_path, hf = False, ms = False, progress_callback = None, **kwargs):
     model_path = NEXA_RUN_MODEL_MAP.get(model_path, model_path)
 
     try:
@@ -123,9 +123,9 @@ def pull_model(model_path, hf = False, ms = False, **kwargs):
                 return location, run_type
 
             if "/" in model_path:
-                result = pull_model_from_hub(model_path, **kwargs)
+                result = pull_model_from_hub(model_path, progress_callback = progress_callback, **kwargs)
             else:
-                result = pull_model_from_official(model_path, **kwargs)
+                result = pull_model_from_official(model_path, progress_callback = progress_callback, **kwargs)
 
         if result["success"]:
             # Only add to model list if not using custom download path
@@ -146,7 +146,7 @@ def pull_model(model_path, hf = False, ms = False, **kwargs):
         return None, None
 
 
-def pull_model_from_hub(model_path, **kwargs):
+def pull_model_from_hub(model_path, progress_callback = None, **kwargs):
     NEXA_MODELS_HUB_DIR.mkdir(parents=True, exist_ok=True)
 
     # Get custom download path from kwargs if present
@@ -191,7 +191,7 @@ def pull_model_from_hub(model_path, **kwargs):
         try:
             # Use custom download path if provided, otherwise use default
             download_path = base_download_dir / file_path
-            download_file_with_progress(presigned_link, download_path, **kwargs)
+            download_file_with_progress(presigned_link, download_path, progress_callback = progress_callback, **kwargs)
 
             if local_path is None:
                 if model_type == "onnx" or model_type == "bin":
@@ -213,7 +213,7 @@ def pull_model_from_hub(model_path, **kwargs):
     }
 
 
-def pull_model_from_official(model_path, **kwargs):
+def pull_model_from_official(model_path, progress_callback = None, **kwargs):
     NEXA_MODELS_HUB_OFFICIAL_DIR.mkdir(parents=True, exist_ok=True)
 
     if "onnx" in model_path:
@@ -225,7 +225,7 @@ def pull_model_from_official(model_path, **kwargs):
 
     run_type = get_run_type_from_model_path(model_path)
     run_type_str = run_type.value if isinstance(run_type, ModelType) else str(run_type)
-    success, location = download_model_from_official(model_path, model_type, **kwargs)
+    success, location = download_model_from_official(model_path, model_type, progress_callback = progress_callback, **kwargs)
     
     return {
         "success": success,
@@ -340,6 +340,7 @@ def download_file_with_progress(
     file_path: Path,
     chunk_size: int = 5 * 1024 * 1024,
     max_workers: int = 20,
+    progress_callback = None,
     use_processes: bool = default_use_processes(),
     **kwargs
 ):
@@ -390,8 +391,14 @@ def download_file_with_progress(
                     chunk_size, chunk_number = future.result()
                     completed_chunks[chunk_number] = True
                     progress_bar.update(chunk_size)
+
+                    downloaded = progress_bar.n
+                    if progress_callback:
+                        progress_callback(downloaded, file_size)
                 except Exception as e:
                     print(f"Error downloading chunk {chunk_number}: {e}")
+                    if progress_callback:
+                        progress_callback(-1, file_size, error=str(e))
 
         progress_bar.close()
 
@@ -417,7 +424,9 @@ def download_file_with_progress(
             combine_progress.close()
         else:
             raise Exception("Some chunks failed to download")
-
+       
+        if progress_callback:
+            progress_callback(file_size, file_size, done=True)
     except Exception as e:
         # Clean up partial files and final file if it exists
         if os.path.exists(file_path):
@@ -428,7 +437,7 @@ def download_file_with_progress(
         shutil.rmtree(temp_dir)
 
 
-def download_model_from_official(model_path, model_type, **kwargs):
+def download_model_from_official(model_path, model_type, progress_callback = None, **kwargs):
     try:
         model_name, model_version = model_path.split(":")
         file_extension = ".zip" if model_type == "onnx" or model_type == "bin" else ".gguf"
@@ -449,7 +458,7 @@ def download_model_from_official(model_path, model_type, **kwargs):
         download_url = f"{NEXA_OFFICIAL_BUCKET}{model_name}/{filename}"  # Keep original structure for download URL
 
         full_path.parent.mkdir(parents=True, exist_ok=True)
-        download_file_with_progress(download_url, full_path, **kwargs)
+        download_file_with_progress(download_url, full_path, progress_callback = progress_callback, **kwargs)
 
         if model_type == "onnx" or model_type == "bin":
             unzipped_folder = full_path.parent / model_version

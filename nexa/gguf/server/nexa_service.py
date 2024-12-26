@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -721,44 +722,75 @@ def _resp_async_generator(streamer):
         yield f"data: {json.dumps(chunk)}\n\n"
     yield "data: [DONE]\n\n"
 
+class DownloadProgress:
+    def __init__(self):
+        self.current = 0
+        self.total = 0
+        self.done = False
+
+    def update(self, current, total, done=False):
+        self.current = current
+        self.total = total
+        self.done = done
+
 @app.post("/v1/download_model", tags=["Model"])
 async def download_model(request: DownloadModelRequest):
-    """Download a model from the model hub"""
-    try:
-        if request.model_path in NEXA_RUN_MODEL_MAP_VLM or request.model_path in NEXA_RUN_OMNI_VLM_MAP or request.model_path in NEXA_RUN_MODEL_MAP_AUDIO_LM:  # models and projectors
-            if request.model_path in NEXA_RUN_MODEL_MAP_VLM:
-                downloaded_path, model_type = pull_model(NEXA_RUN_MODEL_MAP_VLM[request.model_path])
-                projector_downloaded_path, _ = pull_model(NEXA_RUN_PROJECTOR_MAP[request.model_path])
-            elif request.model_path in NEXA_RUN_OMNI_VLM_MAP:
-                downloaded_path, model_type = pull_model(NEXA_RUN_OMNI_VLM_MAP[request.model_path])
-                projector_downloaded_path, _ = pull_model(NEXA_RUN_OMNI_VLM_PROJECTOR_MAP[request.model_path])
-            elif request.model_path in NEXA_RUN_MODEL_MAP_AUDIO_LM:
-                downloaded_path, model_type = pull_model(NEXA_RUN_MODEL_MAP_AUDIO_LM[request.model_path])
-                projector_downloaded_path, _ = pull_model(NEXA_RUN_AUDIO_LM_PROJECTOR_MAP[request.model_path])
-            return {
-                "status": "success",
-                "message": "Successfully downloaded model and projector",
-                "model_path": request.model_path,
-                "model_local_path": downloaded_path,
-                "projector_local_path": projector_downloaded_path,
-                "model_type": model_type
-            }
-        else:
-            downloaded_path, model_type = pull_model(request.model_path)
-            return {
-                "status": "success",
-                "message": "Successfully downloaded model",
-                "model_path": request.model_path,
-                "model_local_path": downloaded_path,
-                "model_type": model_type
-            }
+    """Download a model from the model hub with progress streaming"""
+    
+    async def progress_stream(progress: DownloadProgress):
+        while not progress.done:
+            if progress.total > 0:
+                percentage = (progress.current / progress.total) * 100
+                yield f"data: {json.dumps({'progress': percentage, 'current': progress.current, 'total': progress.total})}\n\n"
+            await asyncio.sleep(0.1)
+        
+        try:
+            if request.model_path in NEXA_RUN_MODEL_MAP_VLM or request.model_path in NEXA_RUN_OMNI_VLM_MAP or request.model_path in NEXA_RUN_MODEL_MAP_AUDIO_LM:
+                if request.model_path in NEXA_RUN_MODEL_MAP_VLM:
+                    downloaded_path, model_type = pull_model(NEXA_RUN_MODEL_MAP_VLM[request.model_path])
+                    projector_downloaded_path, _ = pull_model(NEXA_RUN_PROJECTOR_MAP[request.model_path])
+                elif request.model_path in NEXA_RUN_OMNI_VLM_MAP:
+                    downloaded_path, model_type = pull_model(NEXA_RUN_OMNI_VLM_MAP[request.model_path])
+                    projector_downloaded_path, _ = pull_model(NEXA_RUN_OMNI_VLM_PROJECTOR_MAP[request.model_path])
+                elif request.model_path in NEXA_RUN_MODEL_MAP_AUDIO_LM:
+                    downloaded_path, model_type = pull_model(NEXA_RUN_MODEL_MAP_AUDIO_LM[request.model_path])
+                    projector_downloaded_path, _ = pull_model(NEXA_RUN_AUDIO_LM_PROJECTOR_MAP[request.model_path])
 
-    except Exception as e:
-        logging.error(f"Error downloading model: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to download model: {str(e)}"
-        )
+                data = {
+                    'status': 'success',
+                    'message': 'Successfully downloaded model and projector',
+                    'model_path': request.model_path,
+                    'model_local_path': downloaded_path,
+                    'projector_local_path': projector_downloaded_path,
+                    'model_type': model_type
+                }
+                yield f"data: {json.dumps(data)}\n\n"
+            else:
+                downloaded_path, model_type = pull_model(request.model_path)
+                data ={
+                    'status': 'success',
+                    'message': 'Successfully downloaded model',
+                    'model_path': request.model_path,
+                    'model_local_path': downloaded_path,
+                    'model_type': model_type
+                }
+                yield f"data: {json.dumps(data)}\n\n"
+
+        except Exception as e:
+            logging.error(f"Error downloading model: {e}")
+            data = {
+                'status': 'error',
+                'message': f'Failed to download model: {str(e)}'
+            }
+            yield f"data: {json.dumps(data)}\n\n"
+
+    progress = DownloadProgress()
+    
+    return StreamingResponse(
+        progress_stream(progress),
+        media_type="text/event-stream"
+    )
+
 
 @app.post("/v1/load_model", tags=["Model"])
 async def load_different_model(request: LoadModelRequest):
