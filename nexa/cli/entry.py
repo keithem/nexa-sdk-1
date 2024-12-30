@@ -139,7 +139,84 @@ def run_ggml_inference(args):
         print(f"Error running ggml inference: {e}")
         print(f"Please refer to our docs to install nexaai package: https://docs.nexaai.com/getting-started/installation ")
         return
-
+    
+    if hasattr(args, 'gradio') and args.gradio:
+        
+        from subprocess import run as sub_run
+        import sys
+        
+        cmd = [sys.executable]  
+        
+        if run_type == "NLP":
+        
+            script_name = "gradio_text_chat.py"
+            cmd.extend([
+                script_name,
+                model_path,
+                "True" if is_local_path else "False",
+                "True" if hf else "False"
+            ])
+            
+        elif run_type == "AudioLM":
+            
+            script_name = "gradio_audio_lm.py"
+            cmd.extend([
+                script_name,
+                model_path,
+                "True" if is_local_path else "False",
+                "True" if hf else "False"
+            ])
+            
+            if projector_local_path:
+                cmd.append(projector_local_path)
+                
+        elif run_type == "Computer Vision":
+            
+            script_name = "gradio_image_chat.py"
+            cmd.extend([
+                script_name,
+                model_path,  
+                "True" if is_local_path else "False",
+                "True" if hf else "False"
+            ])
+            
+        elif run_type == "Audio":
+            
+            script_name = "gradio_voice_chat.py"
+            cmd.extend([
+                script_name,
+                model_path,
+                "True" if is_local_path else "False",
+                "True" if hf else "False"
+            ])
+        
+        elif run_type == "Multimodal":
+           
+            if is_local_path and "omni" in local_path:
+                script_name = "gradio_vlm_omni.py"
+            else:
+                script_name = "gradio_vlm_omni.py"  
+            
+            cmd.extend([
+                script_name,
+                model_path,
+                "True" if is_local_path else "False",
+                "True" if hf else "False"
+            ])
+            if projector_local_path:
+                cmd.append(projector_local_path)
+        
+        else:
+            print(f"Run type {run_type} not supported for Gradio. Falling back to normal inference.")
+            inference.run()
+            return
+        
+        print("Running Gradio script:", " ".join(cmd))
+        
+        sub_run(cmd, check=True)
+        
+        return
+    
     if hasattr(args, 'streamlit') and args.streamlit:
         if run_type == "Multimodal" or run_type == "AudioLM":
             inference.run_streamlit(model_path, is_local_path=is_local_path, hf=hf, projector_local_path=projector_local_path)
@@ -453,7 +530,8 @@ def main():
     run_parser.add_argument("-mt", "--model_type", type=str, choices=[e.name for e in ModelType], help="Indicate the model running type (default: NLP)")
     run_parser.add_argument("-hf", "--huggingface", action="store_true", help="Load model from Hugging Face Hub")
     run_parser.add_argument("-ms", "--modelscope", action="store_true", help="Load model from ModelScope Hub")
-
+    run_parser.add_argument("-gr", "--gradio", action="store_true", help="Run the inference with Gradio UI")
+    
     # Text generation/vlm arguments
     text_group = run_parser.add_argument_group('Text generation/VLM options')
     text_group.add_argument("-t", "--temperature", type=float, help="Temperature for sampling")
@@ -618,6 +696,10 @@ def main():
     args = parser.parse_args()
 
     if args.command == "run":
+        
+        if args.streamlit and args.gradio:
+            print("Error: --streamlit and --gradio flags cannot be used together")
+            return
         if args.local_path and args.huggingface:
             print("Error: --local_path and --huggingface flags cannot be used together")
             return
